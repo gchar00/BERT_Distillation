@@ -1,23 +1,6 @@
-# Edited
-# Argument n_layers added, so we can easier extract the weights for 4 layers
-
-# coding=utf-8
-# Copyright 2019-present, the HuggingFace Inc. team.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """
-Preprocessing script before training DistilBERT.
-Specific to BERT -> DistilBERT.
+Preprocessing script before training a smaller DistilBERT.
+Extracts weights from base DistilBERT to initialize the smaller
 """
 import argparse
 
@@ -33,17 +16,17 @@ if __name__ == "__main__":
             " Distillation"
         )
     )
-    parser.add_argument("--model_type", default="bert", choices=["bert"])
-    parser.add_argument("--model_name", default="bert-base-uncased", type=str)
-    parser.add_argument("--dump_checkpoint", default="serialization_dir/tf_bert-base-uncased_0247911.pth", type=str)
+    parser.add_argument("--model_type", default="bert", choices=["bert", "distilbert"])
+    parser.add_argument("--model_name", default="distilbert-base-uncased", type=str)
+    parser.add_argument("--dump_checkpoint", default="serialization_dir/pw_db.pth", type=str)
     parser.add_argument("--vocab_transform", action="store_true")
-    parser.add_argument("--n_layers", default="6", choices=["4", "6"])
+    parser.add_argument("--n_layers", default="4")
 
     args = parser.parse_args()
 
     if args.model_type == "bert":
-        model = BertForMaskedLM.from_pretrained(args.model_name)
-        prefix = "bert"
+        model = DistilBertForMaskedLM.from_pretrained(args.model_name)
+        prefix = "distilbert"
     else:
         raise ValueError('args.model_type should be "bert".')
 
@@ -54,15 +37,10 @@ if __name__ == "__main__":
         compressed_sd[f"distilbert.embeddings.{w}.weight"] = state_dict[f"{prefix}.embeddings.{w}.weight"]
     for w in ["weight", "bias"]:
         compressed_sd[f"distilbert.embeddings.LayerNorm.{w}"] = state_dict[f"{prefix}.embeddings.LayerNorm.{w}"]
-
-    if args.n_layers == "6":
-        layers = [0, 2, 4, 7, 9, 11]
-    else:
-        layers = [0, 4, 8, 11]
     
     std_idx = 0
 
-    for teacher_idx in layers:
+    for teacher_idx in [0, 2, 3, 5]:
         for w in ["weight", "bias"]:
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.attention.q_lin.{w}"] = state_dict[
                 f"{prefix}.encoder.layer.{teacher_idx}.attention.self.query.{w}"
