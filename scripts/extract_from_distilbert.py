@@ -6,7 +6,7 @@ import argparse
 
 import torch
 
-from transformers import DistilBertForMaskedLM
+from transformers import BertForMaskedLM
 
 
 if __name__ == "__main__":
@@ -43,39 +43,39 @@ if __name__ == "__main__":
     for teacher_idx in [0, 2, 3, 5]:
         for w in ["weight", "bias"]:
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.attention.q_lin.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.attention.q_lin.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.attention.self.query.{w}"
             ]
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.attention.k_lin.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.attention.k_lin.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.attention.self.key.{w}"
             ]
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.attention.v_lin.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.attention.v_lin.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.attention.self.value.{w}"
             ]
 
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.attention.out_lin.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.attention.out_lin.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.attention.output.dense.{w}"
             ]
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.sa_layer_norm.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.sa_layer_norm.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.attention.output.LayerNorm.{w}"
             ]
 
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.ffn.lin1.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.ffn.lin1.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.intermediate.dense.{w}"
             ]
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.ffn.lin2.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.ffn.lin2.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.output.dense.{w}"
             ]
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.output_layer_norm.{w}"] = state_dict[
-                f"distilbert.transformer.layer.{std_idx}.output_layer_norm.{w}"
+                f"{prefix}.encoder.layer.{teacher_idx}.output.LayerNorm.{w}"
             ]
         std_idx += 1
 
-    compressed_sd["vocab_projector.weight"] = state_dict["vocab_projector.weight"]
-    compressed_sd["vocab_projector.bias"] = state_dict["vocab_projector.bias"]
+    compressed_sd["vocab_projector.weight"] = state_dict["cls.predictions.decoder.weight"]
+    compressed_sd["vocab_projector.bias"] = state_dict["cls.predictions.bias"]
     if args.vocab_transform:
         for w in ["weight", "bias"]:
-            compressed_sd[f"vocab_transform.{w}"] = state_dict[f"vocab_transform.{w}"]
-            compressed_sd[f"vocab_layer_norm.{w}"] = state_dict[f"vocab_layer_norm.{w}"]
+            compressed_sd[f"vocab_transform.{w}"] = state_dict[f"cls.predictions.transform.dense.{w}"]
+            compressed_sd[f"vocab_layer_norm.{w}"] = state_dict[f"cls.predictions.transform.LayerNorm.{w}"]
 
     print(f"N layers selected for distillation: {std_idx}")
     print(f"Number of params transferred for distillation: {len(compressed_sd.keys())}")
