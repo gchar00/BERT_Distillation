@@ -274,9 +274,6 @@ def main():
     else:
         token_probs = None
 
-    for d in data:
-        print(d.shape())
-
     train_lm_seq_dataset = LmSeqsDataset(params=args, data=data)
     logger.info("Data loader created.")
 
