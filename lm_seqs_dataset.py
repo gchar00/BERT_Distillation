@@ -36,7 +36,7 @@ class LmSeqsDataset(Dataset):
     def __init__(self, params, data):
         self.params = params
 
-        self.token_ids = np.array(data, dtype = object)
+        self.token_ids = np.array(data, dtype = object) # In original code, the dtype wasn't explicitly defined as object
         self.lengths = np.array([len(t) for t in data])
 
         self.check()
@@ -96,7 +96,7 @@ class LmSeqsDataset(Dataset):
                 new_tok_ids.extend(sub_seqs)
                 new_lengths.extend([len(l) for l in sub_seqs])
 
-        self.token_ids = np.array(new_tok_ids)
+        self.token_ids = np.array(new_tok_ids, dtype = object) # In original code, the dtype wasn't explicitly defined as object
         self.lengths = np.array(new_lengths)
 
     def remove_empty_sequences(self):
