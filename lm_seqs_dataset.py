@@ -36,7 +36,7 @@ class LmSeqsDataset(Dataset):
     def __init__(self, params, data):
         self.params = params
 
-        self.token_ids = np.array(data)
+        self.token_ids = np.array(data, dtype = object)
         self.lengths = np.array([len(t) for t in data])
 
         self.check()
