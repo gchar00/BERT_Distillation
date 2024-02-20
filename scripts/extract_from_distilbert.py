@@ -4,18 +4,12 @@ from transformers import DistilBertForMaskedLM
 
 
 if __name__ == "__main__":
-
+    
     model = DistilBertForMaskedLM.from_pretrained("distilbert-base-uncased")
-
-    prefix = "bdistilbert"
+    #prefix = "bert"
 
     state_dict = model.state_dict()
     compressed_sd = {}
-
-    for w in ["word_embeddings", "position_embeddings"]:
-        compressed_sd[f"distilbert.embeddings.{w}.weight"] = state_dict[f"{prefix}.embeddings.{w}.weight"]
-    for w in ["weight", "bias"]:
-        compressed_sd[f"distilbert.embeddings.LayerNorm.{w}"] = state_dict[f"{prefix}.embeddings.LayerNorm.{w}"]
 
     std_idx = 0
 
@@ -51,7 +45,7 @@ if __name__ == "__main__":
 
     compressed_sd["vocab_projector.weight"] = state_dict["vocab_projector.weight"]
     compressed_sd["vocab_projector.bias"] = state_dict["vocab_projector.bias"]
-    
+    #if args.vocab_transform:
     for w in ["weight", "bias"]:
         compressed_sd[f"vocab_transform.{w}"] = state_dict[f"vocab_transform.{w}"]
         compressed_sd[f"vocab_layer_norm.{w}"] = state_dict[f"vocab_layer_norm.{w}"]
@@ -59,5 +53,4 @@ if __name__ == "__main__":
     print(f"N layers selected for distillation: {std_idx}")
     print(f"Number of params transferred for distillation: {len(compressed_sd.keys())}")
 
-    print("Save transferred checkpoint to distilbert_pw.pth.")
-    torch.save(compressed_sd, "distilbert_pw.pth")
+    torch.save(compressed_sd, "serialization_dir/distilbert_four.pth")
