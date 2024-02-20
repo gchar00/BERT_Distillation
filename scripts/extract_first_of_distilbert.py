@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     std_idx = 0
 
-    for teacher_idx in [0, 2, 3, 5]:
+    for teacher_idx in [0, 1, 2, 3]:
         for w in ["weight", "bias"]:
             compressed_sd[f"distilbert.transformer.layer.{std_idx}.attention.q_lin.{w}"] = state_dict[
                 f"distilbert.transformer.layer.{std_idx}.attention.q_lin.{w}"
