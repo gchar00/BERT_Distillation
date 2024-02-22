@@ -59,5 +59,5 @@ if __name__ == "__main__":
     print(f"N layers selected for distillation: {std_idx}")
     print(f"Number of params transferred for distillation: {len(compressed_sd.keys())}")
 
-    print("Save transferred checkpoint to distilbert_pw.pth.")
-    torch.save(compressed_sd, "distilbert_pw.pth")
+    print("Save transferred checkpoint to serialization_dir/distilbert_four.pth.")
+    torch.save(compressed_sd, "serialization_dir/distilbert_four.pth")
