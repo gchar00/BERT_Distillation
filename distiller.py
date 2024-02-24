@@ -27,6 +27,8 @@ from torch import nn
 from torch.optim import AdamW
 from torch.utils.data import BatchSampler, DataLoader, RandomSampler
 from torch.utils.data.distributed import DistributedSampler
+import torch.nn.functional as F
+
 from tqdm import tqdm
 
 from transformers import get_linear_schedule_with_warmup
@@ -379,20 +381,27 @@ class Distiller:
         attention_mask: `torch.tensor(bs, seq_length)` - The attention mask for self attention.
         lm_labels: `torch.tensor(bs, seq_length)` - The language modeling labels (mlm labels for MLM and clm labels for CLM).
         """
+        ## FOLLOWING PART DIFFERS FROM ORIGINAL
+        ## IN THIS VERSION WE KEEP THE ATTENTION LAYERS OF TEACHER AS WELL
+        ## SO WE CAN TAKE INTO CONSIDERATION THE MSE BETWEEN SOME LAYERS OF 
+        ## TEACHER AND STUDEN (Att-MSE Objective as it is described in "How to distil your BERT")
         if self.mlm:
             student_outputs = self.student(
-                input_ids=input_ids, attention_mask=attention_mask
+                input_ids=input_ids, attention_mask=attention_mask, output_attentions=True
             )  # (bs, seq_length, voc_size)
             with torch.no_grad():
                 teacher_outputs = self.teacher(
-                    input_ids=input_ids, attention_mask=attention_mask
+                    input_ids=input_ids, attention_mask=attention_mask, output_attentions=True
                 )  # (bs, seq_length, voc_size)
         else:
-            student_outputs = self.student(input_ids=input_ids, attention_mask=None)  # (bs, seq_length, voc_size)
+            student_outputs = self.student(input_ids=input_ids, attention_mask=None, output_attentions=True)  # (bs, seq_length, voc_size)
             with torch.no_grad():
-                teacher_outputs = self.teacher(input_ids=input_ids, attention_mask=None)  # (bs, seq_length, voc_size)
-        s_logits, s_hidden_states = student_outputs["logits"], student_outputs["hidden_states"]
-        t_logits, t_hidden_states = teacher_outputs["logits"], teacher_outputs["hidden_states"]
+                teacher_outputs = self.teacher(input_ids=input_ids, attention_mask=None, output_attentions=True)  # (bs, seq_length, voc_size)
+        
+        s_logits, s_hidden_states, s_attn = student_outputs["logits"], student_outputs["hidden_states"], student_outputs["attentions"]
+        t_logits, t_hidden_states, t_attn = teacher_outputs["logits"], teacher_outputs["hidden_states"], teacher_outputs["attentions"]
+        ## END OF CHANGES
+        
         assert s_logits.size() == t_logits.size()
 
         # https://github.com/peterliht/knowledge-distillation-pytorch/blob/master/model/net.py#L100
@@ -426,9 +435,17 @@ class Distiller:
             loss += self.alpha_clm * loss_clm
 
         if self.alpha_mse > 0.0:
-            loss_mse = self.mse_loss_fct(s_logits_slct, t_logits_slct) / s_logits_slct.size(
-                0
-            )  # Reproducing batchmean reduction
+            ## Changed the mse metric to compute the mse between attention layers, more in README 
+            new_t_attn = [t_attn[i] for i in [0, 4, 7, 11]]
+
+            loss_mse = 0.
+
+            for student_att, teacher_att in zip(s_attn, new_t_attn):
+                student_att = torch.where(student_att <= -1e2, torch.zeros_like(student_att), student_att)
+                teacher_att = torch.where(teacher_att <= -1e2, torch.zeros_like(teacher_att), teacher_att)
+
+                loss_mse += F.mse_loss(student_att.to(torch.float32), teacher_att.to(torch.float32))
+
             loss += self.alpha_mse * loss_mse
         if self.alpha_cos > 0.0:
             s_hidden_states = s_hidden_states[-1]  # (bs, seq_length, dim)
