@@ -436,7 +436,8 @@ class Distiller:
 
         if self.alpha_mse > 0.0:
             ## Changed the mse metric to compute the mse between attention layers, more in README 
-            new_t_attn = [t_attn[i] for i in [0, 4, 7, 11]]
+            new_t_attn = [t_attn[i] for i in [0, 1, 2, 3]]
+            #new_t_attn = [t_attn[i] for i in [0, 4, 7, 11]]
 
             loss_mse = 0.
 
